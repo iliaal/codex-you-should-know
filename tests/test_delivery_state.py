@@ -91,14 +91,14 @@ def test_delivery_and_replies_are_isolated_by_session(state):
     assert state.note(second)["status"] == "new"
 
 
-def test_stop_arms_midturn_notification_without_repeating_summary(state):
+def test_stop_arms_midturn_notification_with_summary(state):
     identifier = state.save("session", finding(), 100, notify=True)
     expected = state.note(identifier)
     assert state.deliver("session") == ([{"note": expected}], None)
     assert state.deliver("session") == ([], None)
     assert state.deliver("session", ready=True, turn_id="finished-turn") == (
         [],
-        {**expected, "expanded": False, "already_shown": True},
+        {**expected, "expanded": False},
     )
     assert state.deliver("session", ready=True, turn_id="finished-turn") == ([], None)
     assert state.reply("session", "more", turn_id="reply-turn") == {**expected, "expanded": True}
@@ -111,7 +111,7 @@ def test_midturn_reply_disarms_actions_but_keeps_note_for_stop(state, action):
     assert state.reply("session", action, turn_id="reply-turn") is None
     assert state.deliver("session", ready=True, turn_id="finished-turn") == (
         [],
-        {**state.note(identifier), "expanded": False, "already_shown": True},
+        {**state.note(identifier), "expanded": False},
     )
     assert state.note(identifier)["status"] == "new"
 
@@ -219,7 +219,7 @@ def test_interaction_without_stored_turn_id_is_migrated_and_cannot_consume_reply
         assert reopened.note(identifier)["status"] == "new"
         assert reopened.deliver("session", ready=True, turn_id="finished-turn") == (
             [],
-            {**reopened.note(identifier), "expanded": False, "already_shown": True},
+            {**reopened.note(identifier), "expanded": False},
         )
     finally:
         reopened.close()
@@ -243,7 +243,7 @@ def test_migration_keeps_current_interaction_without_resurfacing_other_notes(sta
         expected = {**migrated.note(active), "expanded": False}
         assert migrated.deliver("session", ready=True, turn_id="legacy-turn") == (
             [],
-            None if ready else {**expected, "already_shown": True},
+            None if ready else expected,
         )
         assert migrated.deliver("session", ready=True, turn_id="new-turn") == (
             [{"note": expected, "reminder": True}],
@@ -475,7 +475,7 @@ def test_new_note_takes_precedence_without_losing_older_reminder(state, action):
     assert state.note(second)["status"] == "new"
     assert state.deliver("session", ready=True, turn_id="second-turn") == (
         [],
-        {**state.note(second), "expanded": False, "already_shown": True},
+        {**state.note(second), "expanded": False},
     )
     if action == "chat":
         assert state.reply("session", "more", turn_id="details-turn")["id"] == second

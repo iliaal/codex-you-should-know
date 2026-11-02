@@ -1,5 +1,22 @@
 # Changelog
 
+## [Unreleased]
+
+## [0.3.5] - 2026-11-02
+
+### Fixed
+
+- Ignore exited Codex processes awaiting cleanup (zombies) when checking whether development updates can install. Live standalone CLI sessions still block installation.
+- Preserve invalid-directory handling on Python 3.13 and newer: recorded paths containing symlink loops remain unscoped, and explicit directory filters reject them. Missing directories remain valid filters.
+
+### Changed
+
+- Include the note's summary beside every turn-end reply menu, even when its notification appeared earlier in the turn. Full explanations remain available on request, and repeated hooks for the same turn do not duplicate the menu.
+
+Adapted from Donwulff's [zombie-process fix](https://github.com/Donwulff/codex-you-should-know/commit/31601a1cb1bbd7493ca19a8981069bc2b711c580) and [turn-end summaries](https://github.com/Donwulff/codex-you-should-know/commit/d6bb258fcddf708c5a424640e40c9f98b1ca00db).
+
+Start a new Codex session after updating. Hook definitions are unchanged; existing notes, configuration, and confirmation behavior are preserved.
+
 ## [0.3.4] - 2026-10-29
 
 ### Fixed
@@ -195,7 +212,9 @@ Initial public version.
 - Added persistent notes, known and dismissed topic tracking, configurable review cadence, and manual checks through a bundled skill and CLI.
 - Named the review hooks in Codex's trust interface.
 
-[Unreleased]: https://github.com/iliaal/codex-you-should-know/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/iliaal/codex-you-should-know/compare/v0.3.5...HEAD
+[0.3.5]: https://github.com/iliaal/codex-you-should-know/compare/v0.3.4...v0.3.5
+[0.3.4]: https://github.com/iliaal/codex-you-should-know/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/iliaal/codex-you-should-know/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/iliaal/codex-you-should-know/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/iliaal/codex-you-should-know/compare/v0.3.0...v0.3.1

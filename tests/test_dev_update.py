@@ -386,7 +386,7 @@ def test_codex_process_guard_prevents_installation(monkeypatch, tmp_path):
     monkeypatch.setattr(
         updater,
         "run",
-        lambda *a, **k: subprocess.CompletedProcess([], 0, "12 bash\n34 /opt/codex\n"),
+        lambda *a, **k: subprocess.CompletedProcess([], 0, "12 S bash\n34 Ss /opt/codex\n"),
     )
 
     # Do not accidentally read an unrelated real process with this test PID.
@@ -398,12 +398,25 @@ def test_codex_process_guard_prevents_installation(monkeypatch, tmp_path):
         updater.require_closed_codex(tmp_path)
 
 
+@pytest.mark.parametrize("state", ["Z", "Zs", "Z+"])
+def test_zombie_codex_processes_do_not_block_installation(monkeypatch, tmp_path, state):
+    def process_list(args, *rest, **kwargs):
+        status = f"{state} " if "stat=" in args[-1] else ""
+        return subprocess.CompletedProcess(args, 0, f"76843 {status}codex [codex] <defunct>\n")
+
+    monkeypatch.setattr(updater, "run", process_list)
+    monkeypatch.setattr(
+        Path, "read_bytes", lambda path: pytest.fail("Read arguments of an exited process")
+    )
+    updater.require_closed_codex(tmp_path)
+
+
 def test_persistent_codex_services_do_not_block_installation(monkeypatch, tmp_path):
     # These services remain after the user closes the app's chat windows.
     processes = (
-        "6222 codex /opt/codex app-server daemon pid-update-loop\n"
-        "6875 codex /opt/codex app-server --listen unix:// --managed-daemon\n"
-        "7228 codex-code-mode- /opt/codex-code-mode-host\n"
+        "6222 Ssl codex /opt/codex app-server daemon pid-update-loop\n"
+        "6875 Ssl codex /opt/codex app-server --listen unix:// --managed-daemon\n"
+        "7228 Sl codex-code-mode- /opt/codex-code-mode-host\n"
     )
     monkeypatch.setattr(
         updater, "run", lambda *a, **k: subprocess.CompletedProcess([], 0, processes)
@@ -427,7 +440,8 @@ def test_persistent_codex_services_do_not_block_installation(monkeypatch, tmp_pa
 )
 def test_cli_still_blocks_when_background_services_are_present(monkeypatch, tmp_path, argv):
     processes = (
-        "6222 codex /opt/codex app-server daemon pid-update-loop\n34 codex " + " ".join(argv) + "\n"
+        "6222 Ssl codex /opt/codex app-server daemon pid-update-loop\n"
+        "76843 Zs codex [codex] <defunct>\n34 Ss codex " + " ".join(argv) + "\n"
     )
     monkeypatch.setattr(
         updater, "run", lambda *a, **k: subprocess.CompletedProcess([], 0, processes)
@@ -436,12 +450,12 @@ def test_cli_still_blocks_when_background_services_are_present(monkeypatch, tmp_
     monkeypatch.setattr(
         Path, "read_bytes", lambda path: ("\0".join(commands[path.parent.name]) + "\0").encode()
     )
-    with pytest.raises(updater.UpdateError, match="CLI process IDs: 34"):
+    with pytest.raises(updater.UpdateError, match=r"CLI process IDs: 34\)"):
         updater.require_closed_codex(tmp_path)
 
 
 def test_service_detection_uses_exact_arguments_for_paths_with_spaces(monkeypatch, tmp_path):
-    processes = "6222 codex /opt/Codex App/codex app-server --managed-daemon\n"
+    processes = "6222 Ssl codex /opt/Codex App/codex app-server --managed-daemon\n"
     monkeypatch.setattr(
         updater, "run", lambda *a, **k: subprocess.CompletedProcess([], 0, processes)
     )

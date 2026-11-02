@@ -137,7 +137,7 @@ To include feedback, reply "4 your message".
 
 The numbers keep the same meaning between menus. Chat becomes available only after you read the details. You can use `dismiss` or `chat in main session` instead of a number.
 
-These replies act on the most recent displayed note in the current session. If a note already appeared during the turn, turn end shows only its menu. If you continue ordinary work, the note returns at the next turn end with compact choices. Before you read the details, the reminder looks like this:
+These replies act on the most recent displayed note in the current session. Every turn-end menu includes the note's summary, even if the notification already appeared during the turn. The full explanation appears only when you ask for details. If you continue ordinary work, the note returns at the next turn end with compact choices. Before you read the details, the reminder looks like this:
 
 ```text
 You Should Know [8f31a7c62b40] · Your previous settings were deleted.
@@ -355,7 +355,7 @@ To fetch, merge, validate, and build while Codex is open, use `--prepare-only`. 
 python3 scripts/dev_update.py --prepare-only --no-fetch
 ```
 
-The updater uses your current `CODEX_HOME`, normally `~/.codex`. It refuses installation while a standalone Codex CLI process owned by your user is running. Persistent `codex app-server` and `codex-code-mode-host` services may stay running. The updater cannot detect open app chat windows, so close those yourself before installation.
+The updater uses your current `CODEX_HOME`, normally `~/.codex`. It refuses installation while a live standalone Codex CLI process owned by your user is running. Exited processes awaiting cleanup (zombies) do not block installation. Persistent `codex app-server` and `codex-code-mode-host` services may stay running. The updater cannot detect open app chat windows, so close those yourself before installation.
 
 For a bundle alone, run `python3 scripts/package_plugin.py`. Bundles include runtime files, documentation, and the license, excluding development dependencies, local state, and Git history. Rebuilding replaces only output marked as belonging to the builder. Use a separate `CODEX_HOME` when testing an installation you want to keep separate from your normal profile.
 

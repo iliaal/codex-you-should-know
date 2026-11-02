@@ -238,16 +238,24 @@ def test_prefixed_reply_works_when_agent_has_question(
     assert state.note(identifier)["status"] == "dismissed"
 
 
-def test_stop_does_not_repeat_midturn_body(state, transcript, finding, monkeypatch, capsys):
-    state.save("s", finding, 100, notify=True)
+@pytest.mark.parametrize("question", [False, True])
+@pytest.mark.parametrize("final_check", [False, True])
+def test_stop_menu_includes_summary_after_midturn_delivery(
+    state, transcript, finding, monkeypatch, capsys, question, final_check
+):
+    (state.directory / "config.toml").write_text(f"final_check = {str(final_check).lower()}\n")
+    identifier = state.save("s", finding, 100, notify=True)
     event = {"session_id": "s", "hook_event_name": "PostToolUse"}
     assert finding.summary in hook(monkeypatch, capsys, event, "notify")["systemMessage"]
+    append(transcript, "message", role="assistant", content="Continue?" if question else "Done.")
     monkeypatch.setattr(backend, "review", lambda *a, **k: clear_response())
     event.update(hook_event_name="Stop", turn_id="done", transcript_path=str(transcript))
     message = hook(monkeypatch, capsys, event)["systemMessage"]
-    assert finding.summary not in message
-    assert "After the turn ends" not in message
-    assert "ysk" in message
+    assert message.count(f"You Should Know [{identifier}] · {finding.summary}") == 1
+    assert message.index(finding.summary) < message.index("Tell me more")
+    assert finding.explanation not in message
+    assert ("[ysk 1]" if question else "[1]") in message
+    assert hook(monkeypatch, capsys, event) == {}
 
 
 def test_config_error_shown_once_per_session_revision(state, monkeypatch, capsys):

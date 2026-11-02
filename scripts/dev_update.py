@@ -134,18 +134,21 @@ def update_source(root: Path) -> None:
 
 
 def require_closed_codex(root: Path) -> None:
-    """Check for standalone CLI clients, not persistent app-server services.
+    """Check for live standalone CLI clients, not persistent app-server services.
 
     An app-server process can remain after its UI closes, so this cannot detect
     open app chat windows. The user still needs to close those before updating.
     """
-    result = run(["ps", "-ww", "-U", str(os.getuid()), "-o", "pid=,comm=,args="], root)
+    result = run(["ps", "-ww", "-U", str(os.getuid()), "-o", "pid=,stat=,comm=,args="], root)
     active = []
     for line in result.stdout.splitlines():
-        fields = line.strip().split(None, 2)
-        if len(fields) < 2:
+        fields = line.strip().split(None, 3)
+        if len(fields) < 3:
             continue
-        pid, command = fields[:2]
+        pid, state, command = fields[:3]
+        # Zombies have exited and cannot use hook files, even before being reaped.
+        if state.startswith("Z"):
+            continue
         name = Path(command).name.lower()
         if name not in {"codex", "codex.exe", "codex-cli"} and not name.startswith("codex-"):
             continue
@@ -154,7 +157,7 @@ def require_closed_codex(root: Path) -> None:
         try:
             argv = os.fsdecode(Path(f"/proc/{pid}/cmdline").read_bytes()).rstrip("\0").split("\0")
         except OSError:
-            argv = fields[2].split() if len(fields) > 2 else []
+            argv = fields[3].split() if len(fields) > 3 else []
         executable = Path(argv[0]).name.lower() if argv else name
         if executable == "codex-code-mode-host" or name == "codex-code-mode-host":
             continue

@@ -524,7 +524,7 @@ def notifications(
         else:
             messages.append(item["message"])
     if active:
-        if active["id"] not in shown and not active.get("already_shown"):
+        if active["id"] not in shown:
             messages.append(hook_result({"status": "finding", "note": active})["systemMessage"])
         reminder = any(item.get("reminder") for item in pending)
         if explicit_only:

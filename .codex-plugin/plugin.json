@@ -1,6 +1,6 @@
 {
   "name": "you-should-know",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Independent advisory checks for overlooked issues in Codex conversations.",
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json",

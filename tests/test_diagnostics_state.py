@@ -176,14 +176,15 @@ def test_directory_scope_follows_recorded_session_cwd_and_legacy_aliases(state, 
     assert state.notes(cwd=next_directory)[0]["cwd"] == next_directory
 
 
-def test_unknown_or_invalid_directories_are_visible_only_without_scope(state, tmp_path):
+@pytest.mark.parametrize("suffix", ["", "child"])
+def test_unknown_or_invalid_directories_are_visible_only_without_scope(state, tmp_path, suffix):
     for session in ("unknown", "invalid"):
         state.observe(session, False)
     loop = tmp_path / "loop"
     loop.symlink_to(loop)
     with state.connection:
         state.connection.execute(
-            "UPDATE sessions SET cwd = ? WHERE session_id = 'invalid'", (str(loop),)
+            "UPDATE sessions SET cwd = ? WHERE session_id = 'invalid'", (str(loop / suffix),)
         )
     for session in ("unknown", "invalid", "orphan"):
         state.save(session, finding(session), 100)
@@ -199,6 +200,8 @@ def test_unknown_or_invalid_directories_are_visible_only_without_scope(state, tm
     report = state.diagnostics(str(tmp_path))
     assert report["total_checks"] == 0
     assert report["recent_checks"] == []
+    with pytest.raises(ValueError, match="Cannot resolve working directory"):
+        state.notes(cwd=str(loop / suffix))
 
 
 def test_scope_and_skip_filter_apply_before_limit_but_totals_include_skips(state, tmp_path):
