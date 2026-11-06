@@ -27,7 +27,10 @@ class Config:
 
 def data_directory(override: str | None = None) -> Path:
     if override or os.environ.get("YSK_DATA_DIR"):
-        return Path(override or os.environ["YSK_DATA_DIR"]).expanduser().resolve()
+        try:
+            return Path(override or os.environ["YSK_DATA_DIR"]).expanduser().resolve()
+        except RuntimeError as error:
+            raise ValueError(f"Cannot resolve data directory: {error}") from error
     return Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))) / "you-should-know"
 
 
