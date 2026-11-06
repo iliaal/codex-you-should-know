@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Correct the README's context boundaries to describe prioritizing the latest three user messages and two final assistant replies, rather than the first three user messages. Clarify that earlier instructions and parts of long messages can still fall outside the reviewer excerpt.
+
 ## [0.3.5] - 2026-11-02
 
 ### Fixed
