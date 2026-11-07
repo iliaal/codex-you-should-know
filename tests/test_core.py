@@ -3,6 +3,7 @@ import json
 import os
 import threading
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 from review_responses import clear_response
@@ -918,6 +919,74 @@ def test_data_paths_and_permissions(state, monkeypatch, tmp_path):
     assert data_directory(str(tmp_path / "explicit")) == tmp_path / "explicit"
     assert os.stat(state.directory).st_mode & 0o777 == 0o700
     assert os.stat(state.directory / "state.sqlite3").st_mode & 0o777 == 0o600
+
+
+@pytest.mark.parametrize("source", ["argument", "environment"])
+@pytest.mark.parametrize("command", ["status", "hook", "notify"])
+@pytest.mark.parametrize("failure", [RuntimeError, OSError])
+def test_data_directory_resolution_failure_uses_normal_error_response(
+    tmp_path, monkeypatch, capsys, source, command, failure
+):
+    directory = tmp_path / "invalid"
+
+    def unavailable(path):
+        assert path == directory
+        raise failure("synthetic data path failure")
+
+    monkeypatch.setattr(Path, "resolve", unavailable)
+    arguments = []
+    if source == "argument":
+        arguments = ["--data-dir", str(directory)]
+    else:
+        monkeypatch.setenv("YSK_DATA_DIR", str(directory))
+    monkeypatch.delenv("YSK_REVIEWER_ACTIVE", raising=False)
+    event = {"session_id": "synthetic", "hook_event_name": "PostToolUse"}
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(event)))
+
+    assert main([*arguments, command]) == (1 if command == "status" else 0)
+    output = capsys.readouterr()
+    if command == "status":
+        assert not output.out
+        assert output.err.startswith("you-should-know: ")
+    else:
+        assert not output.err
+        assert json.loads(output.out)["systemMessage"].startswith("You should know: ")
+    assert "synthetic data path failure" in output.out + output.err
+    assert "Traceback" not in output.err
+    assert not list(tmp_path.iterdir())
+
+
+def test_data_directory_symlink_loop_is_reported_without_traceback(tmp_path, capsys):
+    directory = tmp_path / "loop"
+    directory.symlink_to(directory, target_is_directory=True)
+    assert main(["--data-dir", str(directory), "status"]) == 1
+    output = capsys.readouterr()
+    assert not output.out
+    assert output.err.startswith("you-should-know: ")
+    assert str(directory) in output.err
+    assert "Traceback" not in output.err
+    assert list(tmp_path.iterdir()) == [directory]
+
+
+def test_shortcuts_does_not_resolve_unused_data_directory(tmp_path, monkeypatch, capsys):
+    directory = tmp_path / "loop"
+    directory.symlink_to(directory, target_is_directory=True)
+    monkeypatch.setenv("YSK_DATA_DIR", str(directory))
+
+    def unexpected_resolution(path):
+        pytest.fail("Shortcut commands must not resolve the unused data directory")
+
+    monkeypatch.setattr(Path, "resolve", unexpected_resolution)
+    config = tmp_path / "config.toml"
+    original = b'model = "unchanged"\n'
+    config.write_bytes(original)
+
+    assert main(["shortcuts", "remove", "--config", str(config)]) == 0
+    output = capsys.readouterr()
+    assert json.loads(output.out)["status"] == "unchanged"
+    assert not output.err
+    assert config.read_bytes() == original
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["config.toml", "loop"]
 
 
 @pytest.mark.parametrize(

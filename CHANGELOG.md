@@ -4,7 +4,7 @@
 
 ### Fixed
 
-- Correct the README's context boundaries to describe prioritizing the latest three user messages and two final assistant replies, rather than the first three user messages. Clarify that earlier instructions and parts of long messages can still fall outside the reviewer excerpt.
+- Handle invalid data-directory paths through the normal CLI error response instead of a traceback. Shortcut setup and removal no longer resolve the unused notes directory.
 
 ## [0.3.5] - 2026-11-02
 
