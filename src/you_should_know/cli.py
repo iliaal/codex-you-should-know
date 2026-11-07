@@ -857,19 +857,25 @@ def main(argv: list[str] | None = None) -> int:
                 if noninteractive_host():
                     print("{}")
                     return 0
-                if state is None:
-                    state = State(directory)
-                state.hook_seen(
-                    event["session_id"],
-                    "PostToolUse:notify" if args.command == "notify" else event["hook_event_name"],
-                    event.get("cwd", ""),
-                )
-                path = directory / "config.toml"
-                metadata = path.stat()
-                key = f"config:{metadata.st_mtime_ns}:{metadata.st_size}"
-                if not state.notice_once(event["session_id"], key):
-                    print("{}")
-                    return 0
+                try:
+                    if state is None:
+                        state = State(directory)
+                    state.hook_seen(
+                        event["session_id"],
+                        "PostToolUse:notify"
+                        if args.command == "notify"
+                        else event["hook_event_name"],
+                        event.get("cwd", ""),
+                    )
+                    path = directory / "config.toml"
+                    metadata = path.stat()
+                    key = f"config:{metadata.st_mtime_ns}:{metadata.st_size}"
+                    if not state.notice_once(event["session_id"], key):
+                        print("{}")
+                        return 0
+                except (OSError, ValueError, sqlite3.Error):
+                    # Notice bookkeeping must not hide the original configuration error.
+                    pass
             print(json.dumps({"systemMessage": f"You should know: {message}"}))
             return 0
         print(f"you-should-know: {message}", file=sys.stderr)
