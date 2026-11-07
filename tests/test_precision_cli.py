@@ -1,5 +1,6 @@
 import io
 import json
+import sqlite3
 from dataclasses import replace
 
 import pytest
@@ -268,6 +269,71 @@ def test_config_error_shown_once_per_session_revision(state, monkeypatch, capsys
     assert hook(monkeypatch, capsys, event, "notify") == {}
     path.write_text("every_n_tools = -1\n")
     assert "systemMessage" in hook(monkeypatch, capsys, event)
+
+
+@pytest.mark.parametrize("command", ["hook", "notify"])
+def test_config_error_survives_unavailable_state(tmp_path, monkeypatch, capsys, command):
+    directory = tmp_path / "state"
+    directory.mkdir()
+    path = directory / "config.toml"
+    path.write_text("every_n_tools = 0\n")
+    (directory / "state.sqlite3").mkdir()
+    event = {"session_id": "s", "hook_event_name": "PostToolUse"}
+
+    message = hook(monkeypatch, capsys, event, command)["systemMessage"]
+
+    assert str(path) in message
+    assert "every_n_tools must be an integer" in message
+
+
+@pytest.mark.parametrize("method", ["hook_seen", "notice_once"])
+def test_config_error_survives_failed_notice_tracking(state, monkeypatch, capsys, method):
+    path = state.directory / "config.toml"
+    path.write_text("every_n_tools = 0\n")
+
+    def fail(*args, **kwargs):
+        raise sqlite3.OperationalError("database is locked")
+
+    monkeypatch.setattr(State, method, fail)
+    event = {"session_id": "s", "hook_event_name": "PostToolUse"}
+
+    message = hook(monkeypatch, capsys, event)["systemMessage"]
+
+    assert str(path) in message
+    assert "every_n_tools must be an integer" in message
+
+
+def test_config_error_survives_removed_configuration(state, monkeypatch, capsys):
+    path = state.directory / "config.toml"
+    path.write_text("every_n_tools = 0\n")
+    original_load = cli.load_config
+
+    def remove_after_read(directory):
+        try:
+            return original_load(directory)
+        finally:
+            path.unlink()
+
+    monkeypatch.setattr(cli, "load_config", remove_after_read)
+    event = {"session_id": "s", "hook_event_name": "PostToolUse"}
+
+    message = hook(monkeypatch, capsys, event)["systemMessage"]
+
+    assert str(path) in message
+    assert "every_n_tools must be an integer" in message
+
+
+def test_config_error_survives_invalid_recorded_directory(state, tmp_path, monkeypatch, capsys):
+    path = state.directory / "config.toml"
+    path.write_text("every_n_tools = 0\n")
+    loop = tmp_path / "loop"
+    loop.symlink_to(loop)
+    event = {"session_id": "s", "hook_event_name": "PostToolUse", "cwd": str(loop)}
+
+    message = hook(monkeypatch, capsys, event)["systemMessage"]
+
+    assert str(path) in message
+    assert "every_n_tools must be an integer" in message
 
 
 def test_empty_notify_skips_process_tree(monkeypatch, capsys):
