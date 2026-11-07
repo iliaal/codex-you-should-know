@@ -739,11 +739,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     state = None
     event = None
-    directory = data_directory(args.data_dir)
     try:
         if args.command == "shortcuts":
             print(json.dumps(configure_shortcuts(args.action, args.config), indent=2))
             return 0
+        directory = data_directory(args.data_dir)
         event = read_event() if is_hook else None
         if event and event["hook_event_name"] not in {"PostToolUse", "Stop", "UserPromptSubmit"}:
             print("{}")

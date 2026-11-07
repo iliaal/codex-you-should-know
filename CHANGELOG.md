@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Handle invalid data-directory paths through the normal CLI error response instead of a traceback. Shortcut setup and removal no longer resolve the unused notes directory.
+
 ## [0.3.5] - 2026-11-02
 
 ### Fixed
