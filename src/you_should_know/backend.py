@@ -223,6 +223,8 @@ def _event(
     if not isinstance(event, dict):
         raise BackendError("Codex returned an invalid event stream")
     kind = event.get("type")
+    if not isinstance(kind, str):
+        raise BackendError("Codex returned an invalid event stream")
     stages = {
         "thread.started": "thread_started",
         "turn.started": "turn_started",
@@ -246,7 +248,7 @@ def _event(
         if not isinstance(item, dict):
             raise BackendError("Codex returned an invalid item")
         # Events report some actions after execution; this is rejection, not prevention.
-        if item.get("type") not in {"agent_message", "reasoning", "error"}:
+        if item.get("type") not in ("agent_message", "reasoning", "error"):
             raise BackendError("Codex attempted tool use; review discarded")
     elif kind not in {"thread.started", "turn.started", "turn.completed"}:
         raise BackendError("Codex returned an unsupported event")

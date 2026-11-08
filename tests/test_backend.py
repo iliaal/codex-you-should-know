@@ -16,6 +16,39 @@ from you_should_know.backend import BackendError, review
 
 
 class BackendTests(unittest.TestCase):
+    def test_malformed_event_types_preserve_usage_and_safe_diagnostics(self):
+        for kind in ([], {}):
+            events = [{"type": kind}] + [
+                {"type": stage, "item": {"type": kind}}
+                for stage in ("item.started", "item.updated", "item.completed")
+            ]
+            for event in events:
+                for ending in ("\n", ""):
+                    with self.subTest(event=event, ending=ending):
+                        record = {**event, "private": "private-event-canary"}
+                        self.cli(
+                            "print(json.dumps({'type': 'turn.completed', 'usage': {"
+                            "'input_tokens': 123, 'output_tokens': 45}}), flush=True)\n"
+                            f"sys.stdout.write({json.dumps(record) + ending!r})\n"
+                            "out.write_text('{\"finding\":null}')"
+                        )
+                        with self.assertRaises(BackendError) as raised:
+                            review("test", self.schema, timeout=5)
+                        self.assertEqual(
+                            raised.exception.usage, {"input_tokens": 123, "output_tokens": 45}
+                        )
+                        expected_stage = (
+                            "responding" if isinstance(event["type"], str) else "turn_completed"
+                        )
+                        self.assertEqual(
+                            raised.exception.diagnostics,
+                            {"category": "process", "stage": expected_stage, "timeout_seconds": 5},
+                        )
+                        self.assertNotIn(
+                            "private-event-canary",
+                            str(raised.exception) + json.dumps(raised.exception.diagnostics),
+                        )
+
     def test_reported_usage_survives_result_and_late_stream_errors(self):
         for failure in ("json", "oversize", "object", "tool", "exit"):
             with self.subTest(failure=failure):

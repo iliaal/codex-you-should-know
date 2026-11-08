@@ -7,6 +7,7 @@
 - Require explicit `ysk` reply shortcuts when the transcript is empty or structurally invalid, so ordinary answers are not mistaken for note actions. Valid metadata-only histories remain supported.
 - Preserve the normal hook configuration-error response when notice tracking cannot access local state or the configuration file disappears. Duplicate warnings are suppressed when tracking remains available.
 - Handle invalid data-directory paths through the normal CLI error response instead of a traceback. Shortcut setup and removal no longer resolve the unused notes directory.
+- Handle malformed reviewer event and item types as normal review failures, preserving reported usage and sanitized diagnostics instead of raising an uncaught type error.
 
 ## [0.3.5] - 2026-11-02
 
