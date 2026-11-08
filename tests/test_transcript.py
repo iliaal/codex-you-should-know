@@ -74,21 +74,53 @@ def test_excludes_private_and_nontext_items(tmp_path: Path) -> None:
     assert read_transcript(path) == "[user; chars=26]\nVisible synthetic question"
 
 
-def test_valid_empty_history_is_distinct_from_missing_input(tmp_path: Path) -> None:
-    assert read_transcript(rollout(tmp_path)) == ""
+@pytest.mark.parametrize("reader", [read_transcript, last_assistant_message])
+def test_valid_empty_history_is_distinct_from_missing_input(tmp_path: Path, reader) -> None:
+    assert reader(rollout(tmp_path)) == ""
     with pytest.raises(TranscriptError, match="Cannot read transcript"):
-        read_transcript(tmp_path / "missing.jsonl")
+        reader(tmp_path / "missing.jsonl")
 
 
 @pytest.mark.parametrize(
     "data",
-    ["", "{}\n", "[]\n", '{"messages": []}\n', '{"type": "session_meta"}\n', '{"type": []}\n'],
+    [
+        "",
+        "{}\n",
+        "[]\n",
+        '{"messages": []}\n',
+        '{"type": "session_meta"}\n',
+        '{"type": []}\n',
+        '{"type": "future_record", "payload": {}}\n',
+        '{"type": "response_item", "payload": null}\n',
+        '{"type": "response_item", "payload": {}}\n',
+    ],
 )
-def test_rejects_unsupported_or_empty_files(tmp_path: Path, data: str) -> None:
+@pytest.mark.parametrize("reader", [read_transcript, last_assistant_message])
+def test_rejects_unsupported_or_empty_files(tmp_path: Path, data: str, reader) -> None:
     path = tmp_path / "unsupported.jsonl"
     path.write_text(data, encoding="utf-8")
     with pytest.raises(TranscriptError):
-        read_transcript(path)
+        reader(path)
+
+
+@pytest.mark.parametrize("reader", [read_transcript, last_assistant_message])
+def test_malformed_record_after_valid_history_reports_its_location(tmp_path: Path, reader):
+    path = rollout(tmp_path, message("assistant", "Done."))
+    malformed = '{"type": "response_item", "payload": null}\n'
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write(malformed)
+    with pytest.raises(TranscriptError, match="payload object") as caught:
+        reader(path)
+    assert caught.value.diagnostics["path"] == str(path)
+    assert caught.value.diagnostics["line_number"] == 3
+    assert caught.value.diagnostics["line_prefix"] == repr(malformed.encode())
+
+
+def test_latest_assistant_reader_tolerates_unknown_records_in_valid_history(tmp_path: Path):
+    path = rollout(tmp_path, message("assistant", "Done."))
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write('{"type": "future_record", "payload": {}}\n')
+    assert last_assistant_message(path) == "Done."
 
 
 @pytest.mark.parametrize(
@@ -101,9 +133,10 @@ def test_rejects_unsupported_or_empty_files(tmp_path: Path, data: str) -> None:
         {"type": "function_call_output"},
     ],
 )
-def test_rejects_malformed_visible_records(tmp_path: Path, payload: dict) -> None:
+@pytest.mark.parametrize("reader", [read_transcript, last_assistant_message])
+def test_rejects_malformed_visible_records(tmp_path: Path, payload: dict, reader) -> None:
     with pytest.raises(TranscriptError):
-        read_transcript(rollout(tmp_path, payload))
+        reader(rollout(tmp_path, payload))
 
 
 def test_retains_initial_intent_and_latest_work_when_bounded(tmp_path: Path) -> None:

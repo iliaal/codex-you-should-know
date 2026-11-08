@@ -309,6 +309,20 @@ def _visible_item(payload: dict) -> tuple[str, bool] | None:
     return None
 
 
+def _record_payload(row: dict) -> tuple[str, dict | None]:
+    kind = row.get("type")
+    if not isinstance(kind, str):
+        raise TranscriptError("Unsupported transcript format; expected a Codex JSONL rollout")
+    if kind not in _ROLLOUT_TYPES:
+        return kind, None
+    payload = row.get("payload")
+    if not isinstance(payload, dict):
+        raise TranscriptError("Transcript record is missing its payload object")
+    if kind == "response_item" and not isinstance(payload.get("type"), str):
+        raise TranscriptError("Transcript response_item is missing its payload type")
+    return kind, payload
+
+
 def _read(
     path: Path,
     max_chars: int,
@@ -379,24 +393,13 @@ def _read(
                     incomplete_tail = marker == _INCOMPLETE
                     block = marker or ""
                 else:
-                    kind = row.get("type")
-                    if not isinstance(kind, str):
-                        raise TranscriptError(
-                            "Unsupported transcript format; expected a Codex JSONL rollout"
-                        )
-                    if kind not in _ROLLOUT_TYPES:
+                    kind, payload = _record_payload(row)
+                    if payload is None:
                         unknown[kind] = unknown.get(kind, 0) + 1
                         continue
-                    if not isinstance(row.get("payload"), dict):
-                        raise TranscriptError("Transcript record is missing its payload object")
                     recognized = True
                     if kind != "response_item":
                         continue
-                    payload = row.get("payload")
-                    if not isinstance(payload, dict) or not isinstance(payload.get("type"), str):
-                        raise TranscriptError(
-                            "Transcript response_item is missing its payload type"
-                        )
                     visible = _visible_item(payload)
                     if visible is None:
                         continue
@@ -519,19 +522,30 @@ def read_since_snapshot(
 
 def last_assistant_message(path: Path) -> str:
     latest = ""
+    recognized = False
     location = _location(path)
     try:
         with _stream(path, location) as stream:
             for row, _ in _records(stream, complete_only=True, location=location):
-                if row is None or row.get("type") != "response_item":
+                if row is None:
                     continue
-                payload = row.get("payload")
-                if not isinstance(payload, dict):
+                kind, payload = _record_payload(row)
+                if payload is None:
                     continue
-                if payload.get("type") == "message" and payload.get("role") == "assistant":
-                    visible = _visible_item(payload)
-                    if visible:
-                        latest = next(source_blocks(visible[0]))[1]
+                recognized = True
+                if kind != "response_item":
+                    continue
+                visible = _visible_item(payload)
+                if (
+                    visible
+                    and payload.get("type") == "message"
+                    and payload.get("role") == "assistant"
+                ):
+                    latest = next(source_blocks(visible[0]))[1]
+            if not recognized:
+                raise TranscriptError(
+                    "Empty or unsupported transcript; expected a Codex JSONL rollout"
+                )
     except OSError as exc:
         raise TranscriptError(f"Cannot read transcript: {exc.strerror}") from exc
     return latest

@@ -641,6 +641,42 @@ def test_missing_transcript_never_intercepts_bare_answers(state, finding, monkey
     assert state.note(identifier)["status"] == "new"
 
 
+@pytest.mark.parametrize(
+    "data",
+    [
+        "",
+        "{}\n",
+        '{"type": "response_item", "payload": null}\n',
+        '{"type": "response_item", "payload": {"type": "message", "role": "user"}}\n',
+    ],
+)
+@pytest.mark.parametrize("prompt", ["3", "ysk 3"])
+def test_invalid_transcript_requires_explicit_note_reply(
+    state, transcript, finding, monkeypatch, capsys, data, prompt
+):
+    identifier = state.save("s", finding, 100, notify=True)
+    state.deliver("s", ready=True, turn_id="done")
+    transcript.write_text(data, encoding="utf-8")
+    event = {
+        "session_id": "s",
+        "hook_event_name": "UserPromptSubmit",
+        "turn_id": "next",
+        "transcript_path": str(transcript),
+        "prompt": prompt,
+    }
+    result = hook(monkeypatch, capsys, event)
+    if prompt == "3":
+        assert result == {}
+        assert state.note(identifier)["status"] == "new"
+    else:
+        assert result["continue"] is False
+        assert state.note(identifier)["status"] == "dismissed"
+    check = state.diagnostics()["recent_transcript_errors"][0]
+    assert check["phase"] == "reply"
+    assert check["diagnostics"]["transcript_errors"][0]["path"] == str(transcript)
+    assert state.session("s").consecutive_transcript_failures == 0
+
+
 @pytest.mark.parametrize("reported", [False, True])
 def test_error_usage_totals_distinguish_known_usage_from_unknown(
     state, transcript, monkeypatch, reported
