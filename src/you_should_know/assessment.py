@@ -44,6 +44,10 @@ def rejected_response_diagnostics(response: object) -> dict:
 def _text(value: object, field: str, maximum: int) -> str:
     if not isinstance(value, str) or not value.strip() or len(value) > maximum:
         raise AssessmentError(f"Reviewer returned invalid {field}")
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError as error:
+        raise AssessmentError(f"Reviewer returned invalid Unicode in {field}") from error
     whitespace = "\n\t\r" if field == "evidence" else "\n\t"
     if any(ord(char) < 32 and char not in whitespace for char in value):
         raise AssessmentError(f"Reviewer returned control characters in {field}")
