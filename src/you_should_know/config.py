@@ -1,3 +1,4 @@
+import errno
 import os
 import tomllib
 from dataclasses import dataclass, fields
@@ -26,12 +27,23 @@ class Config:
 
 
 def data_directory(override: str | None = None) -> Path:
-    if override or os.environ.get("YSK_DATA_DIR"):
+    try:
+        if override or os.environ.get("YSK_DATA_DIR"):
+            directory = Path(override or os.environ["YSK_DATA_DIR"]).expanduser().resolve()
+        else:
+            directory = (
+                Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))) / "you-should-know"
+            )
+        # Non-strict resolve leaves symlink loops unresolved on Python 3.13 and newer.
+        # The default CODEX_HOME path is not resolved at all.
         try:
-            return Path(override or os.environ["YSK_DATA_DIR"]).expanduser().resolve()
-        except RuntimeError as error:
-            raise ValueError(f"Cannot resolve data directory: {error}") from error
-    return Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))) / "you-should-know"
+            directory.stat()
+        except OSError as error:
+            if error.errno == errno.ELOOP:
+                raise
+        return directory
+    except (OSError, RuntimeError) as error:
+        raise ValueError(f"Cannot resolve data directory: {error}") from error
 
 
 def load_config(directory: Path) -> Config:
