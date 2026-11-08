@@ -1,6 +1,7 @@
 """Synthetic Codex rollout fixtures; no captured user conversations."""
 
 import json
+import sys
 import tracemalloc
 from pathlib import Path
 
@@ -534,3 +535,41 @@ def test_latest_assistant_reader_captures_parse_diagnostics(tmp_path: Path) -> N
     assert caught.value.diagnostics["path"] == str(path)
     assert caught.value.diagnostics["line_number"] == 3
     assert caught.value.diagnostics["line_prefix"] == repr(b"\x00\n")
+
+
+@pytest.mark.parametrize("reader", [read_transcript, read_snapshot, last_assistant_message])
+def test_integer_decode_limit_reports_transcript_location(tmp_path: Path, reader) -> None:
+    path = rollout(tmp_path, message("assistant", "Done."))
+    limit = sys.get_int_max_str_digits()
+    try:
+        sys.set_int_max_str_digits(640)
+        # Exercise the interpreter's real conversion limit, not a mocked JSON decoder.
+        record = '{"type":"token_usage_record","payload":{"tokens":' + "9" * 641 + "}}\n"
+        with path.open("a", encoding="utf-8") as stream:
+            stream.write(record)
+        with pytest.raises(TranscriptError, match="Invalid JSONL at transcript line 3") as caught:
+            reader(path)
+        assert isinstance(caught.value.__cause__, ValueError)
+        assert caught.value.diagnostics["line_number"] == 3
+        assert caught.value.diagnostics["byte_offset"] == len(path.read_bytes()) - len(record)
+        assert caught.value.diagnostics["line_prefix"] == repr(record.encode()[:200])
+    finally:
+        sys.set_int_max_str_digits(limit)
+
+
+@pytest.mark.parametrize("digits", [639, 640])
+def test_metadata_integers_within_decode_limit_remain_supported(
+    tmp_path: Path, digits: int
+) -> None:
+    path = rollout(tmp_path, message("assistant", "Done."))
+    limit = sys.get_int_max_str_digits()
+    try:
+        sys.set_int_max_str_digits(640)
+        with path.open("a", encoding="utf-8") as stream:
+            stream.write(
+                '{"type":"token_usage_record","payload":{"tokens":' + "9" * digits + "}}\n"
+            )
+        assert last_assistant_message(path) == "Done."
+        assert list(source_blocks(read_snapshot(path)[0])) == [("assistant", "Done.")]
+    finally:
+        sys.set_int_max_str_digits(limit)

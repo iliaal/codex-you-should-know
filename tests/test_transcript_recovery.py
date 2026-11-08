@@ -1,5 +1,6 @@
 import hashlib
 import json
+import sys
 from contextlib import contextmanager
 from dataclasses import replace
 
@@ -334,3 +335,26 @@ def test_final_read_retries_visible_append_after_eof(state, tmp_path, reviewer, 
     assert result["reason"] == "Conversation advanced during confirmation"
     assert state.notes() == []
     assert "The failure is fixed now" in read_snapshot(path)[0]
+
+
+def test_integer_decode_failure_uses_background_transcript_recovery(state, tmp_path, reviewer):
+    path = tmp_path / "rollout.jsonl"
+    rollout(path, "Old failure")
+    limit = sys.get_int_max_str_digits()
+    try:
+        sys.set_int_max_str_digits(640)
+        with path.open("a") as stream:
+            stream.write('{"type":"token_usage_record","payload":{"tokens":' + "9" * 641 + "}}\n")
+        result = cli.check(state, replace(Config(), every_n_tools=1), "s", path, "PostToolUse")
+        assert result["status"] == "transcript_unavailable"
+        assert state.session("s").consecutive_transcript_failures == 1
+        assert state.session("s").attempts == 0
+        assert reviewer == []
+        errors = state.diagnostics()["recent_transcript_errors"][0]["diagnostics"][
+            "transcript_errors"
+        ]
+        assert len(errors) == 2  # The normal bounded read retry also ran.
+        assert all(error["line_number"] == 3 for error in errors)
+        assert all(error["reason"] == "Invalid JSONL at transcript line 3" for error in errors)
+    finally:
+        sys.set_int_max_str_digits(limit)
