@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Compatibility
+
+- Report data-directory symlink loops consistently, including on Python 3.13 and newer and for `CODEX_HOME` or home-directory defaults. The notification hook no longer silently ignores these invalid paths.
+
 ### Fixed
 
 - Require explicit `ysk` reply shortcuts when the transcript is empty or structurally invalid, so ordinary answers are not mistaken for note actions. Valid metadata-only histories remain supported.
