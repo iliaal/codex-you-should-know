@@ -14,6 +14,7 @@
 - Handle reviewer JSON exceeding Python's nesting limit through normal review-error diagnostics, retaining reported usage and allowing subsequent checks to recover. This covers both streamed events and the final result file.
 - Handle invalid data-directory paths through the normal CLI error response instead of a traceback. Shortcut setup and removal no longer resolve the unused notes directory.
 - Reject lone Unicode surrogates in reviewer text through normal assessment-error diagnostics before storing findings or decisions. Rejected initial results no longer mark the conversation successfully reviewed, and invalid confirmations withdraw the candidate without publishing a note.
+- Report lone Unicode surrogates in visible transcript text and tool labels through normal transcript-error diagnostics and recovery before hashing or requesting a review. Valid Unicode and literal escape text are preserved.
 - Handle malformed reviewer event and item types as normal review failures, preserving reported usage and sanitized diagnostics instead of raising an uncaught type error.
 - Revalidate checkpoint bytes even when filesystem timestamps are unchanged, so same-size transcript rewrites cannot publish a finding based on stale conversation data.
 
