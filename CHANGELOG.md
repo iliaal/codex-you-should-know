@@ -8,6 +8,7 @@
 
 ### Fixed
 
+- Report transcript JSON integers exceeding Python's digit-conversion limit through normal transcript-error diagnostics and background recovery instead of aborting the check with a bare conversion error.
 - Require explicit `ysk` reply shortcuts when the transcript is empty or structurally invalid, so ordinary answers are not mistaken for note actions. Valid metadata-only histories remain supported.
 - Preserve the normal hook configuration-error response when notice tracking cannot access local state or the configuration file disappears. Duplicate warnings are suppressed when tracking remains available.
 - Handle invalid data-directory paths through the normal CLI error response instead of a traceback. Shortcut setup and removal no longer resolve the unused notes directory.
