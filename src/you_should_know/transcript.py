@@ -249,7 +249,7 @@ def _records(
             continue
         try:
             row = json.loads(raw)
-        except ValueError as exc:
+        except (ValueError, RecursionError) as exc:
             if not raw.endswith(b"\n"):
                 yield None, _INCOMPLETE
                 return

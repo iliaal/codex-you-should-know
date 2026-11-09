@@ -9,6 +9,7 @@
 ### Fixed
 
 - Report transcript JSON integers exceeding Python's digit-conversion limit through normal transcript-error diagnostics and background recovery instead of aborting the check with a bare conversion error.
+- Handle JSON exceeding Python's nesting limit in complete transcript records through normal transcript-error diagnostics and recovery. Excessively nested hook input returns the normal advisory error response instead of a traceback.
 - Require explicit `ysk` reply shortcuts when the transcript is empty or structurally invalid, so ordinary answers are not mistaken for note actions. Valid metadata-only histories remain supported.
 - Preserve the normal hook configuration-error response when notice tracking cannot access local state or the configuration file disappears. Duplicate warnings are suppressed when tracking remains available.
 - Handle reviewer JSON exceeding Python's nesting limit through normal review-error diagnostics, retaining reported usage and allowing subsequent checks to recover. This covers both streamed events and the final result file.
