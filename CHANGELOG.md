@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Reliability
+
+- Handle reviewer JSON exceeding Python's nesting limit through normal review-error diagnostics, retaining reported usage and allowing subsequent checks to recover. This covers both streamed events and the final result file.
+
 ### Compatibility
 
 - Report data-directory symlink loops consistently, including on Python 3.13 and newer and for `CODEX_HOME` or home-directory defaults. The notification hook no longer silently ignores these invalid paths.

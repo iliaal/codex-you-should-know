@@ -218,7 +218,7 @@ def _event(
 ) -> tuple[bool, BackendError | None]:
     try:
         event = json.loads(line)
-    except (UnicodeError, ValueError) as exc:
+    except (UnicodeError, ValueError, RecursionError) as exc:
         raise BackendError("Codex returned an invalid event stream") from exc
     if not isinstance(event, dict):
         raise BackendError("Codex returned an invalid event stream")
@@ -455,7 +455,7 @@ def review(
                     "Codex review exceeded its result limit", usage=usage, diagnostics=diagnostics
                 )
             result = json.loads(raw)
-        except (OSError, UnicodeError, ValueError) as exc:
+        except (OSError, UnicodeError, ValueError, RecursionError) as exc:
             raise BackendError(
                 "Codex returned no valid JSON review", usage=usage, diagnostics=diagnostics
             ) from exc
