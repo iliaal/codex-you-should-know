@@ -2,10 +2,6 @@
 
 ## [Unreleased]
 
-### Reliability
-
-- Handle reviewer JSON exceeding Python's nesting limit through normal review-error diagnostics, retaining reported usage and allowing subsequent checks to recover. This covers both streamed events and the final result file.
-
 ### Compatibility
 
 - Report data-directory symlink loops consistently, including on Python 3.13 and newer and for `CODEX_HOME` or home-directory defaults. The notification hook no longer silently ignores these invalid paths.
@@ -16,6 +12,7 @@
 - Preserve the normal hook configuration-error response when notice tracking cannot access local state or the configuration file disappears. Duplicate warnings are suppressed when tracking remains available.
 - Handle invalid data-directory paths through the normal CLI error response instead of a traceback. Shortcut setup and removal no longer resolve the unused notes directory.
 - Handle malformed reviewer event and item types as normal review failures, preserving reported usage and sanitized diagnostics instead of raising an uncaught type error.
+- Handle reviewer JSON exceeding Python's nesting limit through normal review-error diagnostics, retaining reported usage and allowing subsequent checks to recover. This covers both streamed events and the final result file.
 
 ## [0.3.5] - 2026-11-02
 
