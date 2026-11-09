@@ -71,7 +71,54 @@ def test_broken_config_link_reports_error_without_review(
             assert state.diagnostics()["recent_checks"] == []
         finally:
             state.close()
+        # A failed target lookup must not bypass the normal per-session notice key.
+        other = "notify" if command == "hook" else "hook"
+        for repeated in (other, command):
+            monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(event)))
+            assert cli.main(["--data-dir", str(broken_config.parent), repeated]) == 0
+            output = capsys.readouterr()
+            assert json.loads(output.out) == {}
+            assert not output.err
     assert broken_config.is_symlink()
+
+
+@pytest.mark.parametrize("command", ["hook", "notify"])
+@pytest.mark.parametrize("shape", ["dangling", "invalid_target", "plain"])
+def test_config_warnings_follow_revision_and_session(tmp_path, monkeypatch, capsys, command, shape):
+    path = tmp_path / "config.toml"
+    target = path if shape == "plain" else tmp_path / "settings.toml"
+    if shape != "plain":
+        path.symlink_to(target)
+    if shape != "dangling":
+        target.write_text("every_n_tools = 0\n")
+    monkeypatch.delenv("YSK_REVIEWER_ACTIVE", raising=False)
+    monkeypatch.setattr(cli, "noninteractive_host", lambda: False)
+
+    def unexpected(*args, **kwargs):
+        pytest.fail("Invalid configuration must not start a check or reviewer")
+
+    monkeypatch.setattr(cli, "check", unexpected)
+    monkeypatch.setattr(backend, "review", unexpected)
+
+    def warn(session):
+        event = {"session_id": session, "hook_event_name": "Stop"}
+        monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(event)))
+        assert cli.main(["--data-dir", str(tmp_path), command]) == 0
+        output = capsys.readouterr()
+        assert not output.err
+        return json.loads(output.out)
+
+    assert str(path) in warn("first")["systemMessage"]
+    assert warn("first") == {}
+    assert "systemMessage" in warn("second")
+    if shape == "dangling":
+        path.unlink()
+        path.symlink_to(tmp_path / "another-missing-target.toml")
+    else:
+        # A readable symlink's target can change without changing the link itself.
+        target.write_text("every_n_tools = -1\n")
+    assert "systemMessage" in warn("first")
+    assert warn("first") == {}
 
 
 @pytest.mark.parametrize("shape", ["missing_directory", "missing_file", "file", "link"])
