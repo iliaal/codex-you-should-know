@@ -432,30 +432,27 @@ def _read(
                     raise TranscriptChanged("Transcript file was replaced; review restarted")
                 if after.st_size > cursor and not incomplete_tail:
                     raise TranscriptError("Transcript advanced during snapshot validation")
-                if (before.st_mtime_ns, before.st_ctime_ns) != (
+                # Same-size rewrites can share timestamps; validate the bytes unconditionally.
+                stream.seek(0)
+                digest = hashlib.sha256()
+                remaining = cursor
+                while remaining:
+                    chunk = stream.read(min(remaining, _MAX_LINE_BYTES))
+                    if not chunk:
+                        raise TranscriptChanged("Transcript was truncated; review restarted")
+                    digest.update(chunk)
+                    remaining -= len(chunk)
+                if digest.hexdigest() != checkpoint["sha256"]:
+                    raise TranscriptChanged("Transcript prefix changed; review restarted")
+                current = path.stat()
+                if (current.st_dev, current.st_ino) != identity:
+                    raise TranscriptChanged("Transcript file was replaced; review restarted")
+                if (current.st_mtime_ns, current.st_ctime_ns, current.st_size) != (
                     after.st_mtime_ns,
                     after.st_ctime_ns,
+                    after.st_size,
                 ):
-                    stream.seek(0)
-                    digest = hashlib.sha256()
-                    remaining = cursor
-                    while remaining:
-                        chunk = stream.read(min(remaining, _MAX_LINE_BYTES))
-                        if not chunk:
-                            raise TranscriptChanged("Transcript was truncated; review restarted")
-                        digest.update(chunk)
-                        remaining -= len(chunk)
-                    if digest.hexdigest() != checkpoint["sha256"]:
-                        raise TranscriptChanged("Transcript prefix changed; review restarted")
-                    current = path.stat()
-                    if (current.st_dev, current.st_ino) != identity:
-                        raise TranscriptChanged("Transcript file was replaced; review restarted")
-                    if (current.st_mtime_ns, current.st_ctime_ns, current.st_size) != (
-                        after.st_mtime_ns,
-                        after.st_ctime_ns,
-                        after.st_size,
-                    ):
-                        raise TranscriptError("Transcript changed during snapshot validation")
+                    raise TranscriptError("Transcript changed during snapshot validation")
         if not recognized:
             raise TranscriptError("Empty or unsupported transcript; expected a Codex JSONL rollout")
     except TranscriptError as exc:
