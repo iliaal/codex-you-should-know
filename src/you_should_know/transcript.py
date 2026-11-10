@@ -275,6 +275,15 @@ def _text_content(value: object) -> str:
     return "\n".join(text)
 
 
+def _visible_frame(label: str, text: str) -> str:
+    block = frame(label, text)
+    try:
+        block.encode("utf-8")
+    except UnicodeEncodeError as error:
+        raise TranscriptError("Transcript visible content contains invalid Unicode") from error
+    return block
+
+
 def _visible_item(payload: dict) -> tuple[str, bool] | None:
     kind = payload.get("type")
     if kind == "message":
@@ -291,7 +300,7 @@ def _visible_item(payload: dict) -> tuple[str, bool] | None:
             payload.get("phase") == "final_answer" or payload.get("channel") == "final"
         ):
             label = _FINAL_ASSISTANT
-        return (frame(label, text), role == "user") if text else None
+        return (_visible_frame(label, text), role == "user") if text else None
     if kind in {"function_call", "custom_tool_call"}:
         field = "arguments" if kind == "function_call" else "input"
         name = payload.get("name")
@@ -299,13 +308,13 @@ def _visible_item(payload: dict) -> tuple[str, bool] | None:
             raise TranscriptError("Transcript tool call is missing its name or input")
         text = _text_content(payload[field])
         call_id = payload.get("call_id", "unknown")
-        return frame(f"tool call: {name}; id={call_id}", text), False
+        return _visible_frame(f"tool call: {name}; id={call_id}", text), False
     if kind in {"function_call_output", "custom_tool_call_output"}:
         if "output" not in payload:
             raise TranscriptError("Transcript tool result is missing its output field")
         text = _text_content(payload["output"])
         call_id = payload.get("call_id", "unknown")
-        return (frame(f"tool result: id={call_id}", text), False) if text else None
+        return (_visible_frame(f"tool result: id={call_id}", text), False) if text else None
     return None
 
 
