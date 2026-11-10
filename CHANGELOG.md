@@ -5,6 +5,7 @@
 ### Fixed
 
 - Report transcript JSON integers exceeding Python's digit-conversion limit through normal transcript-error diagnostics and background recovery instead of aborting the check with a bare conversion error.
+- Handle JSON exceeding Python's nesting limit in complete transcript records through normal transcript-error diagnostics and recovery. Excessively nested hook input returns the normal advisory error response instead of a traceback.
 - Require explicit `ysk` reply shortcuts when the transcript is empty or structurally invalid, so ordinary answers are not mistaken for note actions. Valid metadata-only histories remain supported.
 - Report dangling or looping configuration-file symlinks as configuration errors instead of silently restoring enabled review defaults. Repeated hook warnings are suppressed per session and configuration revision when notice tracking is available. Missing configuration files and readable symlinks remain supported.
 - Report data-directory symlink loops consistently, including on Python 3.13 and newer and for `CODEX_HOME` or home-directory defaults. The notification hook no longer silently ignores these invalid paths.

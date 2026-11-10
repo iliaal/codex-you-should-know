@@ -637,7 +637,10 @@ def read_event() -> dict[str, Any]:
     raw = sys.stdin.read(2_000_001)
     if len(raw) > 2_000_000:
         raise ValueError("Hook input exceeds 2 MB")
-    event = json.loads(raw)
+    try:
+        event = json.loads(raw)
+    except RecursionError as error:
+        raise ValueError("Hook input exceeds JSON nesting limit") from error
     if not isinstance(event, dict):
         raise ValueError("Hook input must be a JSON object")
     for field in ("session_id", "hook_event_name"):
