@@ -55,7 +55,7 @@ def load_config(directory: Path) -> Config:
             return Config()
         with path.open("rb") as file:
             data = tomllib.load(file)
-    except (OSError, ValueError) as error:
+    except (OSError, ValueError, RecursionError) as error:
         raise ConfigError(f"Cannot read {path}: {error}") from error
     unknown = data.keys() - {field.name for field in fields(Config)}
     if unknown:

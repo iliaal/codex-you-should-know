@@ -203,17 +203,7 @@ def _write(path: Path, original: bytes, updated: bytes, mode: int) -> None:
             temporary.unlink(missing_ok=True)
 
 
-def configure_shortcuts(action: str, config_path: Path | None = None) -> dict[str, Any]:
-    path = (
-        (
-            config_path
-            or Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex") / "config.toml"
-        )
-        .expanduser()
-        .absolute()
-    )
-    original, mode = _read(path)
-    text = original.decode("utf-8")
+def _prepare_shortcuts(action: str, text: str) -> tuple[str, dict[str, Any]]:
     settings = tomllib.loads(text)
     if action == "install":
         conflicts = [
@@ -254,6 +244,24 @@ def configure_shortcuts(action: str, config_path: Path | None = None) -> dict[st
             "removed": removed,
             "kept_modified": kept,
         }
+    return text, result
+
+
+def configure_shortcuts(action: str, config_path: Path | None = None) -> dict[str, Any]:
+    path = (
+        (
+            config_path
+            or Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex") / "config.toml"
+        )
+        .expanduser()
+        .absolute()
+    )
+    original, mode = _read(path)
+    text = original.decode("utf-8")
+    try:
+        text, result = _prepare_shortcuts(action, text)
+    except RecursionError as error:
+        raise ValueError(f"Cannot process {path}: TOML nesting exceeds Python limits") from error
     updated = text.encode("utf-8")
     if updated != original:
         _write(path, original, updated, mode)
