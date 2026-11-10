@@ -48,9 +48,11 @@ def data_directory(override: str | None = None) -> Path:
 
 def load_config(directory: Path) -> Config:
     path = directory / "config.toml"
-    if not path.exists():
-        return Config()
     try:
+        try:
+            path.lstat()
+        except FileNotFoundError:
+            return Config()
         with path.open("rb") as file:
             data = tomllib.load(file)
     except (OSError, ValueError) as error:

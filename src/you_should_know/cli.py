@@ -868,7 +868,10 @@ def main(argv: list[str] | None = None) -> int:
                         event.get("cwd", ""),
                     )
                     path = directory / "config.toml"
-                    metadata = path.stat()
+                    try:
+                        metadata = path.stat()
+                    except OSError:
+                        metadata = path.lstat()
                     key = f"config:{metadata.st_mtime_ns}:{metadata.st_size}"
                     if not state.notice_once(event["session_id"], key):
                         print("{}")
