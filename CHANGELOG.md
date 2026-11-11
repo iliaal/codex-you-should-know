@@ -21,6 +21,10 @@
 - Handle malformed reviewer event and item types as normal review failures, preserving reported usage and sanitized diagnostics instead of raising an uncaught type error.
 - Revalidate checkpoint bytes even when filesystem timestamps are unchanged, so same-size transcript rewrites cannot publish a finding based on stale conversation data.
 
+### Performance
+
+- Reuse parsed conversation blocks within each evidence-validation decision instead of parsing them again for each quote and source requirement.
+
 ## [0.3.5] - 2026-11-02
 
 ### Fixed
