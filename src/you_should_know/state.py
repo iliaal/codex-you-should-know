@@ -785,10 +785,12 @@ class State:
         return [{**dict(row), "cwd": _stored_cwd(row["cwd"])} for row in rows]
 
     def _hydrate_checks(self, rows: list[sqlite3.Row]) -> list[dict[str, Any]]:
+        # Resolve repeated directories once per list, without retaining stale filesystem state.
+        directories = {cwd: _stored_cwd(cwd) for cwd in dict.fromkeys(row["cwd"] for row in rows)}
         checks = [
             {
                 **dict(row),
-                "cwd": _stored_cwd(row["cwd"]),
+                "cwd": directories[row["cwd"]],
                 "model_called": bool(row["model_called"]),
                 "usage_reported": bool(row["usage_reported"]),
                 "diagnostics": json.loads(row["diagnostics"]),

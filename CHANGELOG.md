@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Resolve repeated working-directory paths once per status history list instead of once per check. Later reads still refresh symlink targets and unavailable paths.
+
 ### Fixed
 
 - Report transcript JSON integers exceeding Python's digit-conversion limit through normal transcript-error diagnostics and background recovery instead of aborting the check with a bare conversion error.
