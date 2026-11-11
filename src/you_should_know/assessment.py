@@ -54,16 +54,19 @@ def _text(value: object, field: str, maximum: int) -> str:
     return value
 
 
-def _quotes(value: object, transcript: str) -> list[str]:
+def _quotes(value: object, transcript: str) -> tuple[list[str], list[tuple[str, str]]]:
     if not isinstance(value, list) or not 1 <= len(value) <= 3:
         raise AssessmentError("A finding must cite one to three transcript quotes")
     quotes = [_text(quote, "evidence", 500) for quote in value]
+    blocks: list[tuple[str, str]] = []
     for quote in quotes:
         if quote not in transcript:
             raise AssessmentError("Reviewer evidence does not occur in the supplied conversation")
-        if not any(quote in body for _, body in _evidence_blocks(transcript)):
+        if not blocks:
+            blocks = _evidence_blocks(transcript)
+        if not any(quote in body for _, body in blocks):
             raise AssessmentError("Each evidence quote must come from a single conversation block")
-    return quotes
+    return quotes, blocks
 
 
 def _evidence_blocks(transcript: str) -> list[tuple[str, str]]:
@@ -75,8 +78,7 @@ def _evidence_blocks(transcript: str) -> list[tuple[str, str]]:
 
 
 def _evidence(value: object, transcript: str, *, assistant_claim: bool = False) -> list[str]:
-    quotes = _quotes(value, transcript)
-    blocks = _evidence_blocks(transcript)
+    quotes, blocks = _quotes(value, transcript)
     if not any(
         quote in text
         for label, text in blocks

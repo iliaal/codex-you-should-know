@@ -42,6 +42,10 @@ Start a new Codex session after updating. Hook definitions are unchanged; existi
 - Give end-of-turn reviews the full remaining check deadline instead of halving it. Defer confirmation when too little time remains, and retain candidates after reviewer timeouts, rate limits, or recognized connection failures.
 - Detect reviewer rate limits in JSON events and recognized stderr errors, stop the affected request, and persist a bounded retry delay shared by automatic checks using the same model. Explicit manual checks can still probe recovery.
 
+### Performance
+
+- Reuse parsed conversation blocks within each evidence-validation decision instead of parsing them again for each quote and source requirement.
+
 ### Added
 
 - Added categorized explanations for clear initial reviews and `no_finding_reasons` totals in `status`, including directory-scoped totals and unknown classifications for older records.
