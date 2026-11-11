@@ -17,6 +17,10 @@
 - Handle malformed reviewer event and item types as normal review failures, preserving reported usage and sanitized diagnostics instead of raising an uncaught type error.
 - Revalidate checkpoint bytes even when filesystem timestamps are unchanged, so same-size transcript rewrites cannot publish a finding based on stale conversation data.
 
+### Performance
+
+- Reuse parsed conversation blocks within each evidence-validation decision instead of parsing them again for each quote and source requirement.
+
 ## [0.3.5] - 2026-11-02
 
 ### Fixed
@@ -41,10 +45,6 @@ Start a new Codex session after updating. Hook definitions are unchanged; existi
 - Retain pending candidates when the Codex executable disappears or cannot start, including during CLI updates. Failed launches no longer consume the hourly or session model-call budget; the normal background cooldown still applies before retrying.
 - Give end-of-turn reviews the full remaining check deadline instead of halving it. Defer confirmation when too little time remains, and retain candidates after reviewer timeouts, rate limits, or recognized connection failures.
 - Detect reviewer rate limits in JSON events and recognized stderr errors, stop the affected request, and persist a bounded retry delay shared by automatic checks using the same model. Explicit manual checks can still probe recovery.
-
-### Performance
-
-- Reuse parsed conversation blocks within each evidence-validation decision instead of parsing them again for each quote and source requirement.
 
 ### Added
 
