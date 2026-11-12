@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Reuse per-table schema information during each local-state initialization instead of querying it again for every historical migration field.
 - Resolve repeated working-directory paths once per status history list instead of once per check. Later reads still refresh symlink targets and unavailable paths.
 
 ### Fixed
