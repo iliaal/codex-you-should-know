@@ -2,11 +2,6 @@
 
 ## [Unreleased]
 
-### Changed
-
-- Reuse per-table schema information during each local-state initialization instead of querying it again for every historical migration field.
-- Resolve repeated working-directory paths once per status history list instead of once per check. Later reads still refresh symlink targets and unavailable paths.
-
 ### Fixed
 
 - Report excessively nested TOML configuration through normal CLI diagnostics instead of a traceback. Hooks remain non-blocking, and shortcut setup or removal leaves configuration bytes unchanged when nesting exceeds Python limits.
@@ -25,6 +20,8 @@
 
 ### Performance
 
+- Reuse per-table schema information during each local-state initialization instead of querying it again for every historical migration field.
+- Resolve repeated working-directory paths once per status history list instead of once per check. Later reads still refresh symlink targets and unavailable paths.
 - Reuse parsed conversation blocks within each evidence-validation decision instead of parsing them again for each quote and source requirement.
 - Parse reviewer stdout lines without repeatedly copying the unconsumed buffer, and avoid rescanning incomplete lines when a read contains no newline.
 
