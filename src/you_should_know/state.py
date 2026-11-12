@@ -202,6 +202,8 @@ class State:
                     self.connection.execute(
                         "ALTER TABLE reminders ADD COLUMN expanded INTEGER NOT NULL DEFAULT 0"
                     )
+            # Schema reads are shared only within this initialization, not across connections.
+            table_columns: dict[str, set[str]] = {}
             for table, name, declaration in (
                 ("sessions", "touched_at", "REAL NOT NULL DEFAULT 0"),
                 ("sessions", "cwd", "TEXT NOT NULL DEFAULT ''"),
@@ -220,9 +222,14 @@ class State:
                 ("checks", "candidate_id", "INTEGER"),
                 ("checks", "note_id", "TEXT"),
             ):
-                columns = self.connection.execute(f"PRAGMA table_info({table})").fetchall()
-                if not any(column["name"] == name for column in columns):
+                if table not in table_columns:
+                    table_columns[table] = {
+                        column["name"]
+                        for column in self.connection.execute(f"PRAGMA table_info({table})")
+                    }
+                if name not in table_columns[table]:
                     self.connection.execute(f"ALTER TABLE {table} ADD COLUMN {name} {declaration}")
+                    table_columns[table].add(name)
                     if table == "interactions":
                         self.connection.execute("UPDATE interactions SET ready = 0")
                     elif table == "notes":
