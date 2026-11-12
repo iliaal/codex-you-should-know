@@ -26,6 +26,7 @@
 ### Performance
 
 - Reuse parsed conversation blocks within each evidence-validation decision instead of parsing them again for each quote and source requirement.
+- Parse reviewer stdout lines without repeatedly copying the unconsumed buffer, and avoid rescanning incomplete lines when a read contains no newline.
 
 ## [0.3.5] - 2026-11-02
 

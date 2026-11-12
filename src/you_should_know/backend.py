@@ -334,13 +334,18 @@ def _run(command: list[str], prompt: bytes, workspace: Path, timeout: float) -> 
                             raise BackendError("Codex review exceeded its output limit")
                         if key.data:
                             pending.extend(chunk)
-                            while b"\n" in pending:
-                                line, _, rest = pending.partition(b"\n")
-                                pending = bytearray(rest)
+                            if b"\n" not in chunk:
+                                continue
+                            # Scan offsets instead of copying the remaining buffer for every line.
+                            start = 0
+                            while (end := pending.find(b"\n", start)) >= 0:
+                                line = bytes(pending[start:end])
+                                start = end + 1
                                 if line.strip():
-                                    finished, diagnostic = _event(bytes(line), usage, diagnostics)
+                                    finished, diagnostic = _event(line, usage, diagnostics)
                                     completed = finished or completed
                                     last_error = diagnostic or last_error
+                            del pending[:start]
                         else:
                             stderr_pending.extend(chunk)
                             if b"\n" not in chunk:
