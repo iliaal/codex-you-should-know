@@ -563,7 +563,7 @@ def reply(
     prompt: Any,
     turn_id: str | None = None,
     *,
-    explicit_only: bool = False,
+    explicit_only: bool | Callable[[], bool] = False,
     timeout_seconds: int = 600,
     cwd: str = "",
 ) -> dict[str, Any]:
@@ -593,7 +593,11 @@ def reply(
         separator and REPLY_ACTIONS.get(prefix.strip()) == "chat"
     ):
         action = "chat"
-    if explicit_only and not text.startswith("ysk "):
+    # Only a note action reads explicit_only, which may scan the whole transcript.
+    explicit = action is not None and (
+        explicit_only() if callable(explicit_only) else explicit_only
+    )
+    if explicit and not text.startswith("ysk "):
         action = None
     note = state.reply(session_id, action, turn_id, timeout_seconds=timeout_seconds)
     if note is None:
@@ -620,7 +624,7 @@ def reply(
         }
     if action == "more":
         evidence = "\n".join(f"> {quote}" for quote in note["evidence"])
-        hint = EXPLICIT_DETAIL_HINT if explicit_only else DETAIL_HINT
+        hint = EXPLICIT_DETAIL_HINT if explicit else DETAIL_HINT
         message = (
             f"You Should Know [{note['id']}] · {note['summary']}\n\n"
             f"{note['explanation']}\n\nTranscript evidence:\n{evidence}\n\n{hint}"
@@ -791,7 +795,7 @@ def main(argv: list[str] | None = None) -> int:
                 event["session_id"],
                 event.get("prompt"),
                 event.get("turn_id"),
-                explicit_only=assistant_waiting(
+                explicit_only=lambda: assistant_waiting(
                     event.get("transcript_path"), on_error=record_reply_error
                 ),
                 timeout_seconds=config.reply_timeout_seconds,

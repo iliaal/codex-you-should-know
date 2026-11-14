@@ -20,6 +20,7 @@
 
 ### Performance
 
+- Read the transcript for a pending assistant question only when a submitted prompt is a note reply, instead of reading the whole rollout on every prompt. Ordinary prompts no longer record a reply-phase transcript error when the transcript is unreadable.
 - Reuse per-table schema information during each local-state initialization instead of querying it again for every historical migration field.
 - Resolve repeated working-directory paths once per status history list instead of once per check. Later reads still refresh symlink targets and unavailable paths.
 - Reuse parsed conversation blocks within each evidence-validation decision instead of parsing them again for each quote and source requirement.
