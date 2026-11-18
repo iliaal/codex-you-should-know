@@ -523,6 +523,12 @@ class State:
             )
 
     def muted(self, session_id: str, cwd: str = "") -> bool:
+        """Use explicit cwd or the last recorded path; without either, check session mutes only."""
+        if not cwd:
+            row = self.connection.execute(
+                "SELECT cwd FROM sessions WHERE session_id = ?", (session_id,)
+            ).fetchone()
+            cwd = row["cwd"] if row is not None else ""
         project = str(Path(cwd).resolve()) if cwd else ""
         with self.connection:
             cursor = self.connection.execute(
