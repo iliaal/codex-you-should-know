@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-11-18
+
 ### Fixed
 
 - Report excessively nested TOML configuration through normal CLI diagnostics instead of a traceback. Hooks remain non-blocking, and shortcut setup or removal leaves configuration bytes unchanged when nesting exceeds Python limits.
@@ -25,6 +27,8 @@
 - Resolve repeated working-directory paths once per status history list instead of once per check. Later reads still refresh symlink targets and unavailable paths.
 - Reuse parsed conversation blocks within each evidence-validation decision instead of parsing them again for each quote and source requirement.
 - Parse reviewer stdout lines without repeatedly copying the unconsumed buffer, and avoid rescanning incomplete lines when a read contains no newline.
+
+Start a new Codex session after updating.
 
 ## [0.3.5] - 2026-11-02
 
@@ -236,7 +240,8 @@ Initial public version.
 - Added persistent notes, known and dismissed topic tracking, configurable review cadence, and manual checks through a bundled skill and CLI.
 - Named the review hooks in Codex's trust interface.
 
-[Unreleased]: https://github.com/iliaal/codex-you-should-know/compare/v0.3.5...HEAD
+[Unreleased]: https://github.com/iliaal/codex-you-should-know/compare/v0.3.6...HEAD
+[0.3.6]: https://github.com/iliaal/codex-you-should-know/compare/v0.3.5...v0.3.6
 [0.3.5]: https://github.com/iliaal/codex-you-should-know/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/iliaal/codex-you-should-know/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/iliaal/codex-you-should-know/compare/v0.3.2...v0.3.3
