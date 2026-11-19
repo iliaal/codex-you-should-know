@@ -610,3 +610,30 @@ def test_native_codex_failed_update_restores_installed_bytes_and_enabled_state(
     assert actual == expected
     assert tomllib.loads(config.read_text())["notice"] == previous_settings["notice"]
     assert "# Preserve this comment" in config.read_text()
+
+
+@pytest.mark.parametrize("existing_stash", [False, True])
+def test_dirty_submodule_does_not_restore_an_older_stash(repos, existing_stash):
+    local, remote = repos
+    nested = local / "nested"
+    nested.mkdir()
+    git(nested, "init", "-b", "main")
+    configure(nested)
+    commit(nested, "nested.txt", "original nested content\n")
+    git(local, "add", "nested")
+    git(local, "commit", "-m", "Track nested repository")
+    if existing_stash:
+        (local / "preferences.txt").write_text("earlier saved work\n")
+        git(local, "stash", "push", "-m", "existing stash")
+    old_stash = git(local, "stash", "list", "--format=%H")
+    before = git(local, "rev-parse", "HEAD")
+    (nested / "nested.txt").write_text("unsaved nested work\n")
+    commit(remote, "new upstream.txt", "new upstream feature\n")
+
+    with pytest.raises(updater.UpdateError, match="did not save.*new stash"):
+        updater.update_source(local)
+
+    assert git(local, "rev-parse", "HEAD") == before
+    assert git(local, "stash", "list", "--format=%H") == old_stash
+    assert (local / "preferences.txt").read_text() == "original preferences\n"
+    assert (nested / "nested.txt").read_text() == "unsaved nested work\n"

@@ -341,7 +341,7 @@ To update and install your development checkout, close Codex chat windows and st
 python3 scripts/dev_update.py
 ```
 
-The updater requires Git, uv, and the Codex CLI. It fetches and merges your branch's tracked upstream, temporarily saving and restoring staged, unstaged, and untracked work. If the merge conflicts, it aborts the merge and restores your work. If restoring your edits conflicts with a successful merge, it stops and retains the edits in a Git stash. It never installs after a merge or validation failure.
+The updater requires Git, uv, and the Codex CLI. It fetches and merges your branch's tracked upstream, temporarily saving and restoring staged, unstaged, and untracked work. If the merge conflicts, it aborts the merge and restores your work. If restoring your edits conflicts with a successful merge, it stops and retains the edits in a Git stash. If dirty work does not produce a new stash, such as changes only inside a nested repository, it stops before merging and leaves existing stashes untouched. It never installs after a merge or validation failure.
 
 Before installation, it installs the locked development dependencies and runs the tests, lint, formatting, type, and whitespace checks. It builds a bundle under `dist/development/` with a version derived from its contents, such as `0.3.3-dev.g0123456789abcdef`, without changing the checkout's published version files.
 
