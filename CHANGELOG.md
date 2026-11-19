@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Honor a session’s last recorded project mute when hook input omits its working directory, preventing queued alerts and note replies from bypassing the mute. An explicitly supplied new directory still takes precedence.
+
 ## [0.3.6] - 2026-11-18
 
 ### Fixed
