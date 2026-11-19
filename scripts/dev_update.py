@@ -77,6 +77,7 @@ def restore_edits(root: Path, stash: str) -> None:
 
 
 def update_source(root: Path) -> None:
+    """Merge upstream, refusing dirty work that Git cannot save in a new stash."""
     check_git_state(root)
     branch = git(root, "symbolic-ref", "--quiet", "--short", "HEAD", allow_failure=True)
     if not branch:
@@ -102,8 +103,15 @@ def update_source(root: Path) -> None:
         return
     stash = ""
     if git(root, "status", "--porcelain", "--untracked-files=all"):
+        previous_stash = git(root, "rev-parse", "--verify", "refs/stash", allow_failure=True)
         git(root, "stash", "push", "--include-untracked", "--message", "YSK development update")
-        stash = git(root, "rev-parse", "refs/stash")
+        stash = git(root, "rev-parse", "--verify", "refs/stash", allow_failure=True)
+        if not stash or stash == previous_stash:
+            raise UpdateError(
+                "Git did not save the uncommitted work in a new stash; "
+                "commit or save changes inside nested repositories before updating. "
+                "Upstream was not merged and existing stashes were left intact."
+            )
         print(f"Saved your uncommitted work temporarily: {stash}", flush=True)
     try:
         result = run(["git", "merge", "--no-edit", target], root, allow_failure=True)

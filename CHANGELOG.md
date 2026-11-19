@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- Stop `python3 scripts/dev_update.py` before updating when dirty nested repositories prevent Git from creating a new stash, preserving existing stashes and nested edits instead of restoring and dropping an unrelated saved stash.
 - Honor a session’s last recorded project mute when hook input omits its working directory, preventing queued alerts and note replies from bypassing the mute. An explicitly supplied new directory still takes precedence.
 
 ## [0.3.6] - 2026-11-18
