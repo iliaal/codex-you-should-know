@@ -249,7 +249,21 @@ Manual checks record the invoking working directory for the supplied session, so
 
 Identical topic labels, ignoring whitespace and case, are suppressed across sessions and projects sharing the data directory. Path punctuation remains significant. The reviewer sees summaries and statuses of up to 40 recent notes, plus a separate list of known and dismissed topic labels within the prompt byte budget. Older known topics can remain in that list after their summaries leave recent history.
 
-By default, state untouched for 30 days is pruned at turn end and when you run `status`, including old notes, candidates, sessions, reminders, interactions, and check history. Pruning also removes obsolete review lock files only when no review holds them. Set `retention_days` to change the period. Pruned topics can appear again, and there is no reopen action for retained notes.
+Retention is opportunistic, not a background deletion deadline. `status` attempts to prune the
+selected data directory before filtering its output; `status --cwd PATH` still
+targets eligible records from every project in that directory. Cleanup is skipped
+while an active review holds the pruning guard. Stop-hook cleanup
+runs only when an enabled, interactive, unmuted hook reaches that step; disabled,
+noninteractive or muted hooks do not prune. Run `status` against the same data directory to clean
+up retained state even when hooks are disabled.
+
+The default `retention_days = 30` is an age threshold: records exactly at the
+cutoff are retained. Notes, candidates, sessions and mutes use their last-touch
+time; check history uses creation time. Reminders and interactions are removed
+when their note is pruned or their session expires, not simply at their own age.
+Pruning removes obsolete review lock files only when no review holds them.
+Set `retention_days` to change the threshold. Pruned topics can appear again,
+and there is no reopen action for retained notes.
 
 ## Configure
 
