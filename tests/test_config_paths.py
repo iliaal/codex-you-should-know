@@ -9,15 +9,20 @@ from you_should_know.cli import main
 from you_should_know.config import data_directory
 
 
-@pytest.fixture(params=["argument", "environment", "codex_home", "home"])
+@pytest.fixture(params=["argument", "environment", "codex_home", "home", "blank_codex_home"])
 def data_path(request, tmp_path, monkeypatch):
     monkeypatch.delenv("YSK_DATA_DIR", raising=False)
     monkeypatch.delenv("CODEX_HOME", raising=False)
     monkeypatch.delenv("YSK_REVIEWER_ACTIVE", raising=False)
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
     source = request.param
-    if source == "home":
+    if source in {"home", "blank_codex_home"}:
         directory = tmp_path / ".codex" / "you-should-know"
+        if source == "blank_codex_home":
+            monkeypatch.setenv("CODEX_HOME", "")
+            project = tmp_path / "project"
+            project.mkdir()
+            monkeypatch.chdir(project)
     elif source == "codex_home":
         monkeypatch.setenv("CODEX_HOME", str(tmp_path / "codex"))
         directory = tmp_path / "codex" / "you-should-know"
@@ -98,3 +103,46 @@ def test_data_path_probe_does_not_reject_other_stat_errors(data_path, monkeypatc
 
     monkeypatch.setattr(Path, "stat", unavailable)
     assert data_directory(arguments[1] if arguments else None) == expected
+
+
+@pytest.mark.parametrize(
+    ("codex_home", "env_override", "cli_override", "selected"),
+    [
+        (None, None, None, "home/.codex/you-should-know"),
+        ("", None, None, "home/.codex/you-should-know"),
+        ("custom", None, None, "custom/you-should-know"),
+        ("", "env", None, "env"),
+        ("", "env", "cli", "cli"),
+    ],
+)
+def test_status_data_path_is_independent_of_project(
+    tmp_path, monkeypatch, capsys, codex_home, env_override, cli_override, selected
+):
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("CODEX_HOME", raising=False)
+    monkeypatch.delenv("YSK_DATA_DIR", raising=False)
+    if codex_home is not None:
+        monkeypatch.setenv("CODEX_HOME", str(tmp_path / codex_home) if codex_home else "")
+    if env_override is not None:
+        monkeypatch.setenv("YSK_DATA_DIR", str(tmp_path / env_override))
+    args = ["--data-dir", str(tmp_path / cli_override)] if cli_override else []
+
+    for name in ("first", "second"):
+        project = tmp_path / name
+        project.mkdir()
+        legacy = project / "you-should-know"
+        if name == "second":
+            legacy.mkdir()
+            # A project-local directory left by an older invocation stays untouched.
+            (legacy / "state.sqlite3").write_bytes(b"existing state")
+        monkeypatch.chdir(project)
+        assert main([*args, "status"]) == 0
+        output = capsys.readouterr()
+        assert not output.err
+        assert json.loads(output.out)["data_directory"] == str(tmp_path / selected)
+        assert (tmp_path / selected / "state.sqlite3").is_file()
+        if name == "first":
+            assert not legacy.exists()
+        else:
+            assert (legacy / "state.sqlite3").read_bytes() == b"existing state"

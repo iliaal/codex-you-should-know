@@ -31,9 +31,8 @@ def data_directory(override: str | None = None) -> Path:
         if override or os.environ.get("YSK_DATA_DIR"):
             directory = Path(override or os.environ["YSK_DATA_DIR"]).expanduser().resolve()
         else:
-            directory = (
-                Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))) / "you-should-know"
-            )
+            home = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
+            directory = home / "you-should-know"
         # Non-strict resolve leaves symlink loops unresolved on Python 3.13 and newer.
         # The default CODEX_HOME path is not resolved at all.
         try:
