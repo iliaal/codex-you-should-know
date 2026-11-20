@@ -284,7 +284,7 @@ def installed_package(plugin: dict) -> Path:
         or Path(version).name != version
     ):
         raise UpdateError("Could not identify the installed YSK version; leaving it intact.")
-    home = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex")))
+    home = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
     package = home / "plugins/cache" / NAME / NAME / version
     try:
         manifest = json.loads((package / ".codex-plugin/plugin.json").read_text())
