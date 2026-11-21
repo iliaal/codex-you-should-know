@@ -240,6 +240,36 @@ def installation(source, tmp_path, monkeypatch):
     return source, fake
 
 
+@pytest.mark.parametrize("profile", [None, "", "custom profile"])
+@pytest.mark.parametrize("project", ["first", "nested/second"])
+def test_installed_package_respects_codex_home(tmp_path, monkeypatch, profile, project):
+    home = tmp_path / "home"
+    default = home / ".codex"
+    explicit = tmp_path / "custom profile"
+    cwd = tmp_path / project
+    cwd.mkdir(parents=True)
+    monkeypatch.setattr(Path, "home", lambda: home)
+    monkeypatch.chdir(cwd)
+    if profile is None:
+        monkeypatch.delenv("CODEX_HOME", raising=False)
+    else:
+        monkeypatch.setenv("CODEX_HOME", str(explicit) if profile else "")
+
+    version = "1.0.0"
+    inventory = {"name": updater.NAME, "version": version}
+    package = Path("plugins/cache") / updater.NAME / updater.NAME / version
+    manifest = Path(".codex-plugin/plugin.json")
+    # Every location is a disposable stand-in; no real profile or CLI is used.
+    for directory in (default, explicit, cwd):
+        path = directory / package / manifest
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps(inventory))
+
+    expected = explicit if profile else default
+    assert updater.installed_package(inventory) == expected / package
+    assert (cwd / package / manifest).is_file()
+
+
 def test_published_install_switches_to_local_and_repeated_install_is_unchanged(installation):
     root, fake = installation
     bundle = updater.build(root)

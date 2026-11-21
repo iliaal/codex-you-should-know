@@ -5,6 +5,7 @@
 ### Fixed
 
 - Treat an empty `CODEX_HOME` like an unset one when locating note data, so the default stays under `~/.codex/you-should-know` instead of following the current project. Explicit data-directory overrides still take precedence; existing data is not moved.
+- Treat an empty `CODEX_HOME` as unset in `python3 scripts/dev_update.py`, so the updater finds the installed plugin under `~/.codex` instead of the current directory.
 - Stop `python3 scripts/dev_update.py` before updating when dirty nested repositories prevent Git from creating a new stash, preserving existing stashes and nested edits instead of restoring and dropping an unrelated saved stash.
 - Honor a session’s last recorded project mute when hook input omits its working directory, preventing queued alerts and note replies from bypassing the mute. An explicitly supplied new directory still takes precedence.
 
